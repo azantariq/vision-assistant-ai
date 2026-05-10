@@ -1,0 +1,22 @@
+model:
+  path: "models/yolov8n.pt"
+  confidence_threshold: 0.5
+
+camera:
+  index: 0
+  width: 640
+  height: 480
+
+performance:
+  frame_skip: 2
+
+audio:
+  enabled: true
+  speech_rate: 160
+
+tracking:
+  enabled: true
+
+logging:
+  save_logs: true
+  log_path: "outputs/detection_logs.txt"

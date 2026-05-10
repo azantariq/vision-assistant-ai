@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vision Assistant — Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/dashboard.css" />
+</head>
+<body>
+
+  <!-- ── Top Bar ─────────────────────────────────────────────────────────── -->
+  <header class="topbar">
+    <div class="topbar__brand">
+      <span class="topbar__dot" id="statusDot"></span>
+      <span class="topbar__title">VISION ASSISTANT</span>
+    </div>
+
+    <div class="topbar__stats">
+      <div class="stat-chip">
+        <span class="stat-chip__label">FPS</span>
+        <span class="stat-chip__value" id="statFps">—</span>
+      </div>
+      <div class="stat-chip">
+        <span class="stat-chip__label">OBJECTS</span>
+        <span class="stat-chip__value" id="statObjects">—</span>
+      </div>
+      <div class="stat-chip">
+        <span class="stat-chip__label">RISK AVG</span>
+        <span class="stat-chip__value" id="statRisk">—</span>
+      </div>
+      <div class="stat-chip">
+        <span class="stat-chip__label">UPTIME</span>
+        <span class="stat-chip__value" id="statUptime">—</span>
+      </div>
+    </div>
+
+    <div class="topbar__meta">
+      <span class="topbar__time" id="clockDisplay"></span>
+    </div>
+  </header>
+
+  <!-- ── Main Layout ─────────────────────────────────────────────────────── -->
+  <main class="layout">
+
+    <!-- Left column: feed + voice -->
+    <section class="col col--left">
+
+      <!-- Live Feed -->
+      <div class="card card--feed">
+        <div class="card__header">
+          <span class="card__label">LIVE FEED</span>
+          <span class="feed__badge" id="feedBadge">CONNECTING</span>
+        </div>
+        <div class="feed__frame">
+          <img
+            id="liveFeed"
+            alt="Live AI Feed"
+            class="feed__img"
+          />
+          <div class="feed__offline" id="feedOffline">
+            <span>FEED UNAVAILABLE</span>
+            <small>Python backend not reachable</small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Voice Status -->
+      <div class="card card--voice">
+        <div class="card__header">
+          <span class="card__label">VOICE STATUS</span>
+          <span class="voice__indicator" id="voiceIndicator">IDLE</span>
+        </div>
+        <div class="voice__body">
+          <div class="voice__last">
+            <span class="voice__field">Last spoken</span>
+            <span class="voice__text" id="voiceLastSpoken">—</span>
+          </div>
+          <div class="voice__queue">
+            <span class="voice__field">Queue depth</span>
+            <span class="voice__value" id="voiceQueue">0</span>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Right column: alerts -->
+    <aside class="col col--right">
+      <div class="card card--alerts">
+        <div class="card__header">
+          <span class="card__label">ALERTS</span>
+          <span class="alerts__count" id="alertsCount">0</span>
+        </div>
+        <ul class="alerts__list" id="alertsList">
+          <li class="alerts__empty">No alerts</li>
+        </ul>
+      </div>
+    </aside>
+
+  </main>
+
+  <!-- ── Detection Log ────────────────────────────────────────────────────── -->
+  <section class="log-section">
+    <div class="card card--log">
+      <div class="card__header">
+        <span class="card__label">DETECTION LOG</span>
+        <span class="log__meta" id="logMeta">0 entries</span>
+      </div>
+      <div class="log__scroll">
+        <table class="log__table">
+          <thead>
+            <tr>
+              <th>LABEL</th>
+              <th>ZONE</th>
+              <th>DISTANCE</th>
+              <th>SPEED</th>
+              <th>RISK</th>
+              <th>TIME</th>
+            </tr>
+          </thead>
+          <tbody id="logBody">
+            <tr class="log__empty-row">
+              <td colspan="6">Waiting for detections…</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <script src="/dashboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+
+# Virtual Environment
+venv/
+env/
+vision-ai/
+
+# Model Weights
+*.pt
+*.pth
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Outputs
+outputs/
+
+# Node
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# VSCode
+.vscode/
+
+# Environment Variables
+.env
