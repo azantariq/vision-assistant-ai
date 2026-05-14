@@ -41,17 +41,20 @@ class SceneAnalyzer:
     # ----------------------------
     # DISTANCE ESTIMATION
     # ----------------------------
-    def estimate_distance(self, bbox, frame_width):
+    def estimate_distance(self, bbox, frame_width, frame_height):
+
         x1, y1, x2, y2 = bbox
 
-        box_width = x2 - x1
-        ratio = box_width / frame_width
+        area = (x2 - x1) * (y2 - y1)
+        frame_area = frame_width * frame_height
 
-        if ratio > 0.5:
+        ratio = area / frame_area
+
+        if ratio > 0.4:
             return "VERY_CLOSE"
-        elif ratio > 0.25:
+        elif ratio > 0.2:
             return "CLOSE"
-        elif ratio > 0.1:
+        elif ratio > 0.05:
             return "MEDIUM"
         else:
             return "FAR"
@@ -59,7 +62,7 @@ class SceneAnalyzer:
     # ----------------------------
     # MAIN ANALYSIS ENGINE
     # ----------------------------
-    def analyze(self, detections, frame_width):
+    def analyze(self, detections, frame_width, frame_height):
         scene_output = []
         current_time = time.time()
 
@@ -74,7 +77,11 @@ class SceneAnalyzer:
             # ----------------------------
             # DISTANCE
             # ----------------------------
-            distance = self.estimate_distance(det["bbox"], frame_width)
+            distance = self.estimate_distance(
+                det["bbox"],
+                frame_width,
+                frame_height
+                )
 
             # ----------------------------
             # MOTION (SPEED ESTIMATION)
