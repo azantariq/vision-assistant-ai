@@ -2,8 +2,9 @@ import cv2
 import time
 import threading
 import uvicorn
+import requests
 
-# import web_api
+import web_api
 
 from src.detection.model_loader import YOLOModelLoader
 from src.analysis.scene_analyzer import SceneAnalyzer
@@ -11,7 +12,7 @@ from src.audio.voice_engine import VoiceEngine
 
 # from src.ocr.ocr_engine import OCREngine
 # from src.ocr.text_filter import OCRTextFilter
-# from src.brain.decision_engine import DecisionEngine
+from src.brain.decision_engine import DecisionEngine
 
 from src.analysis.object_memory import ObjectMemory
 
@@ -39,9 +40,10 @@ class InferenceEngine:
         # DISABLED MODULES (FOR NOW)
         # ----------------------------
         self.analyzer = SceneAnalyzer()
-        # self.voice = VoiceEngine()
+        self.voice = VoiceEngine()
 
-        # self.brain = DecisionEngine()
+        self.brain = DecisionEngine()
+        self.behavior_triggered = set()
 
         # OCR
         # self.ocr_engine = OCREngine()
@@ -60,11 +62,17 @@ class InferenceEngine:
         self.current_ocr_results = []
 
         self.last_motion_state = {}
+        self.cooldowns = {}  # {key: last_time}
+        self.COOLDOWN_SEC = 2.0
+        self.is_speaking = False
 
         # ----------------------------
         # MOTION TRACKING MEMORY
         # ----------------------------
         self.track_memory = {}
+        self.behavior_history = {}
+        self.behavior_cooldown = {}
+        self.BEHAVIOR_COOLDOWN_SEC = 5
 
         # ----------------------------
         # OCR THREAD DISABLED
@@ -78,20 +86,155 @@ class InferenceEngine:
         # ----------------------------
         # FASTAPI DISABLED
         # ----------------------------
-        # def start_api():
-        #     uvicorn.run(
-        #         web_api.app,
-        #         host="127.0.0.1",
-        #         port=8001,
-        #         log_level="warning"
-        #     )
+        def start_api():
+            uvicorn.run(
+                web_api.app,
+                host="127.0.0.1",
+                port=8001,
+                log_level="warning"
+            )
 
-        # threading.Thread(
-        #     target=start_api,
-        #     daemon=True
-        # ).start()
+        threading.Thread(
+            target=start_api,
+            daemon=True
+        ).start()
 
-        # print("[INFO] FastAPI bridge started on port 8001")
+        print("[INFO] FastAPI bridge started on port 8001")
+
+    # def send_to_server(self, detections, motions, scene_data, fps):
+    #     try:
+    #         payload = {
+    #             "fps": fps,
+    #             "objects": [
+    #                 {
+    #                     "id": d.get("id", -1),
+    #                     "label": d["label"],
+    #                     "zone": "CENTER",
+    #                     "risk": 50,
+    #                     "age": 0,
+    #                     "motion": "STABLE"
+    #                 }
+    #                 for d in detections
+    #             ],
+    #             "alerts": [
+    #                 {
+    #                     "id": int(time.time() * 1000),
+    #                     "type": "BEHAVIOR",
+    #                     "message": "Live update from Python",
+    #                     "risk_level": "LOW",
+    #                     "timestamp": time.time()
+    #                 }
+    #             ],
+    #             "scene_summary": "Live Python AI running",
+    #             "dominant_objects": [d["label"] for d in detections[:3]],
+    #             "activity_status": "ACTIVE",
+    #             "uptime": time.time(),
+    #             "frame_count": self.frame_counter
+    #         }
+
+    #         requests.post("http://localhost:8000/api/python", json=payload, timeout=0.2)
+
+    #     except Exception as e:
+    #         print("[PIPE ERROR]", e)
+
+    def update_behavior(self, motions):
+
+        for m in motions:
+
+            obj_id = m["id"]
+
+            if obj_id not in self.behavior_history:
+                self.behavior_history[obj_id] = []
+
+            self.behavior_history[obj_id].append({
+                "direction": m["direction"],
+                "motion": m["motion"],
+                "time": time.time()
+            })
+
+            # keep only last 10 states
+            self.behavior_history[obj_id] = self.behavior_history[obj_id][-10:]
+
+    def get_object_age(self, obj_id):
+
+        obj = self.memory.get(obj_id)
+
+        if not obj:
+            return 0
+
+        return time.time() - obj["first_seen"]
+
+    def detect_lifecycle(self):
+
+        current_ids = set(self.track_memory.keys())
+        stored_ids = set(self.memory.get_all().keys())
+
+        entered = current_ids - stored_ids
+        left = stored_ids - current_ids
+
+        return {
+            "entered": list(entered),
+            "left": list(left)
+        }
+    
+    def update_memory(self, detections):
+
+        current_time = time.time()
+
+        for det in detections:
+
+            obj_id = det.get("id", -1)
+
+            if obj_id == -1:
+                continue
+
+            x1, y1, x2, y2 = det["bbox"]
+
+            cx = (x1 + x2) / 2
+            cy = (y1 + y2) / 2
+
+            zone = "UNKNOWN"
+
+            # safe zone inference (basic fallback)
+            if cx < 200:
+                zone = "LEFT"
+            elif cx > 440:
+                zone = "RIGHT"
+            else:
+                zone = "CENTER"
+
+            # ✅ FIXED CALL (match your ObjectMemory signature)
+            self.memory.update(
+                obj_id,
+                det["label"],
+                det["bbox"],
+                zone,
+                current_time
+                
+            )
+
+    def speak_safe(self, message):
+
+        if self.is_speaking:
+            return
+
+        self.is_speaking = True
+
+        try:
+            self.voice.speak(message)
+        finally:
+            self.is_speaking = False
+
+
+    def can_trigger(self, key):
+        current = time.time()
+        last_time = self.cooldowns.get(key, 0)
+
+        if current - last_time > self.COOLDOWN_SEC:
+            self.cooldowns[key] = current
+            return True
+
+        return False
 
     # ----------------------------
     # MOTION ANALYSIS
@@ -344,6 +487,8 @@ class InferenceEngine:
 
             detections = []
 
+            
+
             # ----------------------------
             # PROCESS DETECTIONS
             # ----------------------------
@@ -377,11 +522,29 @@ class InferenceEngine:
                         "bbox": (x1, y1, x2, y2),
                         "id": track_id
                     })
+            self.update_memory(detections)
+
+            lifecycle = self.detect_lifecycle()
+
+            for obj_id in lifecycle["left"]:
+                self.memory.remove(obj_id)
+
+                # reset behavior trigger
+                key = f"behavior_{obj_id}_staying_long"
+                if key in self.behavior_triggered:
+                    self.behavior_triggered.remove(key)
+
+            for obj_id in lifecycle["entered"]:
+                print(f"[LIFECYCLE] ENTERED: {obj_id}")
+
+            for obj_id in lifecycle["left"]:
+                print(f"[LIFECYCLE] LEFT: {obj_id}")
 
             # ----------------------------
             # MOTION ANALYSIS
             # ----------------------------
             motions = self.update_motion(detections)
+            self.update_behavior(motions)
 
             # ----------------------------
             # PRINT MOTION INFO
@@ -390,24 +553,26 @@ class InferenceEngine:
 
                 obj_id = motion["id"]
 
-                current_state = (
-                    motion["direction"],
-                    motion["motion"]
-                )
-
+                current_state = (motion["direction"], motion["motion"])
                 previous_state = self.last_motion_state.get(obj_id)
 
-                # print only if state changes
+                # ONLY PRINT IF STATE CHANGES + COOLDOWN
                 if current_state != previous_state:
 
-                    print(
-                        f"[MOTION] "
-                        f"ID={obj_id} "
-                        f"{motion['direction']} "
-                        f"{motion['motion']}"
-                    )
+                    key = f"motion_{obj_id}"
 
-                    self.last_motion_state[obj_id] = current_state
+                    if self.can_trigger(key):
+
+                        print(
+                            f"[MOTION] ID={obj_id} "
+                            f"{motion['direction']} "
+                            f"{motion['motion']}"
+                        )
+
+                        self.last_motion_state[obj_id] = current_state
+
+            if motions:
+                self.update_behavior(motions)
 
             # ----------------------------
             # SCENE ANALYSIS DISABLED
@@ -419,13 +584,39 @@ class InferenceEngine:
             )
             for item in scene_data:
 
+                obj_id = item.get("id", -1)
+                age = self.get_object_age(obj_id)
+
                 print(
                     f"[SCENE] "
                     f"{item['label']} | "
                     f"{item['zone']} | "
                     f"{item['distance']} | "
+                    f"Age={age:.1f}s | "
                     f"Risk={item['risk_score']}"
-                    )
+                )
+
+            # ----------------------------
+            # 🔧 STEP 5 — BEHAVIOR INTELLIGENCE UPGRADE
+            # ----------------------------
+            # ----------------------------
+            # BEHAVIOR INTELLIGENCE (FIXED)
+            # ----------------------------
+
+            for obj_id, obj in self.memory.get_all().items():
+
+                age = time.time() - obj["first_seen"]
+
+                if age > 5:
+
+                    key = f"behavior_{obj_id}_staying_long"
+
+                    # only trigger ONCE
+                    if key not in self.behavior_triggered:
+
+                        print(f"[BEHAVIOR ALERT] {obj['label']} staying too long: {age:.1f}s")
+
+                        self.behavior_triggered.add(key)
 
             # ----------------------------
             # FPS
@@ -440,6 +631,26 @@ class InferenceEngine:
 
             prev_time = curr_time
 
+            web_api.update_state(
+                fps=fps,
+                object_count=len(detections),
+                risk_avg=0.0,
+                voice_active=self.is_speaking,
+                last_spoken=None,
+                is_speaking=self.is_speaking,
+                queue_size=0
+            )   
+
+
+            for det in detections[:10]:
+                web_api.push_detection(
+                    label=det["label"],
+                    zone="CENTER",
+                    risk_score=0.0,
+                    risk_level="low"
+                )
+            
+
             cv2.putText(
                 frame,
                 f"FPS: {int(fps)}",
@@ -450,53 +661,40 @@ class InferenceEngine:
                 2
             )
 
+            # self.send_to_server(detections, motions, scene_data, fps)
+
             # ----------------------------
             # DASHBOARD DISABLED
             # ----------------------------
-            # web_api.update_state(
-            #     fps=fps,
-            #     object_count=len(detections),
-            #     risk_avg=0,
-            #     voice_active=True,
-            #     last_spoken="",
-            #     is_speaking=False,
-            #     queue_size=0
-            # )
+            
 
+            # ----------------------------
             # ----------------------------
             # BRAIN + ALERTS DISABLED
             # ----------------------------
-            # for det in scene_data:
 
-            #     motion = next(
-            #         (
-            #             m for m in motions
-            #             if m["id"] == det.get("id")
-            #         ),
-            #         None
-            #     )
+            for det in scene_data:
 
-            #     message = self.brain.generate_message(
-            #         det,
-            #         motion
-            #     )
+                obj_id = det.get("id", -1)
 
-            #     key = (
-            #         f"{det['label']}_{det['zone']}"
-            #     )
+                motion = next(
+                    (m for m in motions if m["id"] == det.get("id")),
+                    None
+                )
 
-            #     if self.brain.should_speak(key):
+                message = self.brain.generate_message(det, motion)
 
-            #         print(
-            #             "[BRAIN ALERT]",
-            #             message
-            #         )
+                key = f"brain_{det['label']}_{det['zone']}"
 
-            #         threading.Thread(
-            #             target=self.voice.speak,
-            #             args=(message,),
-            #             daemon=True
-            #         ).start()
+                if self.can_trigger(key):
+
+                    print("[BRAIN]", message)
+
+                    threading.Thread(
+                        target=self.speak_safe,
+                        args=(message,),
+                        daemon=True
+                    ).start()
 
             #         web_api.push_alert(
             #             message,
@@ -510,11 +708,13 @@ class InferenceEngine:
                 frame,
                 detections
             )
+            if self.latest_frame is not None:
+                web_api.update_frame(frame)
 
             # ----------------------------
             # STREAM DISABLED
             # ----------------------------
-            # web_api.update_frame(frame)
+            
 
             # ----------------------------
             # SHOW WINDOW

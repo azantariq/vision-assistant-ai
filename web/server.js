@@ -7,17 +7,19 @@ const path    = require('path');
 const apiRouter = require('./routes/api');
 
 const app  = express();
-// Default to 8000 since most users open the dashboard there.
-// Keep Python on a different port (see `web/services/pythonBridge.js`).
 const PORT = process.env.PORT || 8000;
 
 // ── View engine ──────────────────────────────────────────────────────────────
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
+
+
+
 // ── Middleware ────────────────────────────────────────────────────────────────
 app.use(morgan('dev'));
-app.use(express.json());
+
+app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, 'public')));
 

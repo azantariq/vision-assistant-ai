@@ -1,27 +1,38 @@
 class ObjectMemory:
+
     def __init__(self):
-        self.memory = {}
+        self.store = {}
 
-    def update(self, obj_id, label, zone):
-        if obj_id == -1:
-            return None
+    def update(self, obj_id, label, bbox, zone, timestamp):
 
-        prev = self.memory.get(obj_id)
+        if obj_id not in self.store:
 
-        self.memory[obj_id] = {
-            "label": label,
-            "zone": zone
-        }
+            self.store[obj_id] = {
+                "id": obj_id,
+                "label": label,
+                "bbox": bbox,
+                "zone": zone,
+                "first_seen": timestamp,
+                "last_seen": timestamp,
+                "count": 1
+            }
 
-        return prev
+        else:
 
-    def get_movement(self, obj_id, current_zone):
-        prev = self.memory.get(obj_id)
+            obj = self.store[obj_id]
 
-        if not prev:
-            return "NEW"
+            obj["bbox"] = bbox
+            obj["zone"] = zone
+            obj["last_seen"] = timestamp
+            obj["count"] += 1
 
-        if prev["zone"] == current_zone:
-            return "STABLE"
+    def get(self, obj_id):
+        return self.store.get(obj_id, None)
 
-        return f"{prev['zone']} -> {current_zone}"
+    def get_all(self):
+        return self.store
+
+    def remove(self, obj_id):
+        if obj_id in self.store:
+            del self.store[obj_id]
+    

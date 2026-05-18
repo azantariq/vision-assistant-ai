@@ -3,114 +3,270 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Vision Assistant — Dashboard</title>
+  <title>VISION INTELLIGENCE — AI SURVEILLANCE SYSTEM</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/dashboard.css" />
 </head>
 <body>
 
+  <!-- Animated background grid -->
+  <div class="bg-grid"></div>
+  <div class="bg-scanline"></div>
+  <canvas id="bgCanvas" class="bg-canvas"></canvas>
+
+  <!-- Boot sequence overlay -->
+  <div id="bootOverlay" class="boot-overlay">
+    <div class="boot-content">
+      <div class="boot-logo">
+        <span class="boot-logo-text">VISION<span class="accent">AI</span></span>
+        <div class="boot-logo-bar"></div>
+      </div>
+      <div class="boot-lines" id="bootLines"></div>
+      <div class="boot-progress">
+        <div class="boot-progress-bar" id="bootBar"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- ── Top Bar ─────────────────────────────────────────────────────────── -->
   <header class="topbar">
     <div class="topbar__brand">
-      <span class="topbar__dot" id="statusDot"></span>
-      <span class="topbar__title">VISION ASSISTANT</span>
-    </div>
-
-    <div class="topbar__stats">
-      <div class="stat-chip">
-        <span class="stat-chip__label">FPS</span>
-        <span class="stat-chip__value" id="statFps">—</span>
+      <div class="brand-hex">
+        <svg width="32" height="32" viewBox="0 0 32 32">
+          <polygon points="16,2 28,9 28,23 16,30 4,23 4,9" fill="none" stroke="var(--accent)" stroke-width="1.5"/>
+          <polygon points="16,6 24,11 24,21 16,26 8,21 8,11" fill="var(--accent)" opacity="0.15"/>
+          <circle cx="16" cy="16" r="3" fill="var(--accent)"/>
+        </svg>
       </div>
-      <div class="stat-chip">
-        <span class="stat-chip__label">OBJECTS</span>
-        <span class="stat-chip__value" id="statObjects">—</span>
+      <div class="brand-text">
+        <span class="brand-title">VISION INTELLIGENCE</span>
+        <span class="brand-sub">AI SURVEILLANCE SYSTEM v2.0</span>
       </div>
-      <div class="stat-chip">
-        <span class="stat-chip__label">RISK AVG</span>
-        <span class="stat-chip__value" id="statRisk">—</span>
-      </div>
-      <div class="stat-chip">
-        <span class="stat-chip__label">UPTIME</span>
-        <span class="stat-chip__value" id="statUptime">—</span>
+      <div class="status-indicator" id="statusIndicator">
+        <span class="status-dot" id="statusDot"></span>
+        <span class="status-label" id="statusLabel">INITIALIZING</span>
       </div>
     </div>
 
-    <div class="topbar__meta">
-      <span class="topbar__time" id="clockDisplay"></span>
-    </div>
+    <nav class="topbar__stats">
+      <div class="stat-panel">
+        <div class="stat-panel__glow"></div>
+        <span class="stat-panel__label">FPS</span>
+        <span class="stat-panel__value" id="statFps">—</span>
+      </div>
+      <div class="stat-panel">
+        <div class="stat-panel__glow"></div>
+        <span class="stat-panel__label">OBJECTS</span>
+        <span class="stat-panel__value" id="statObjects">—</span>
+      </div>
+      <div class="stat-panel stat-panel--risk">
+        <div class="stat-panel__glow"></div>
+        <span class="stat-panel__label">RISK AVG</span>
+        <span class="stat-panel__value" id="statRisk">—</span>
+      </div>
+      <div class="stat-panel">
+        <div class="stat-panel__glow"></div>
+        <span class="stat-panel__label">UPTIME</span>
+        <span class="stat-panel__value" id="statUptime">—</span>
+      </div>
+      <div class="stat-panel stat-panel--clock">
+        <div class="stat-panel__glow"></div>
+        <span class="stat-panel__label">TIME</span>
+        <span class="stat-panel__value mono" id="clockDisplay">--:--:--</span>
+      </div>
+    </nav>
   </header>
 
-  <!-- ── Main Layout ─────────────────────────────────────────────────────── -->
-  <main class="layout">
+  <!-- ── Main Grid ───────────────────────────────────────────────────────── -->
+  <main class="dashboard-grid">
 
-    <!-- Left column: feed + voice -->
-    <section class="col col--left">
-
-      <!-- Live Feed -->
-      <div class="card card--feed">
-        <div class="card__header">
-          <span class="card__label">LIVE FEED</span>
-          <span class="feed__badge" id="feedBadge">CONNECTING</span>
+    <!-- ── LIVE FEED ───────────────────────────────────────────────────────── -->
+    <section class="panel panel--feed" id="panelFeed">
+      <div class="panel__frame">
+        <div class="panel__corner panel__corner--tl"></div>
+        <div class="panel__corner panel__corner--tr"></div>
+        <div class="panel__corner panel__corner--bl"></div>
+        <div class="panel__corner panel__corner--br"></div>
+      </div>
+      <div class="panel__header">
+        <div class="panel__header-left">
+          <span class="panel__icon">◈</span>
+          <span class="panel__title">LIVE FEED</span>
+          <span class="feed-badge" id="feedBadge">CONNECTING</span>
         </div>
-        <div class="feed__frame">
-          <img
-            id="liveFeed"
-            alt="Live AI Feed"
-            class="feed__img"
-          />
-          <div class="feed__offline" id="feedOffline">
-            <span>FEED UNAVAILABLE</span>
-            <small>Python backend not reachable</small>
-          </div>
+        <div class="panel__header-right">
+          <span class="feed-res">640×480</span>
+          <span class="feed-rec" id="feedRec">● REC</span>
         </div>
       </div>
 
-      <!-- Voice Status -->
-      <div class="card card--voice">
-        <div class="card__header">
-          <span class="card__label">VOICE STATUS</span>
-          <span class="voice__indicator" id="voiceIndicator">IDLE</span>
-        </div>
-        <div class="voice__body">
-          <div class="voice__last">
-            <span class="voice__field">Last spoken</span>
-            <span class="voice__text" id="voiceLastSpoken">—</span>
+      <div class="feed-container">
+        <!-- 3D perspective wrapper -->
+        <div class="feed-3d-wrap">
+          <div class="feed-scanlines"></div>
+          <div class="feed-overlay-top"></div>
+          <div class="feed-overlay-bottom"></div>
+
+          <!-- Corner brackets -->
+          <div class="feed-bracket feed-bracket--tl"></div>
+          <div class="feed-bracket feed-bracket--tr"></div>
+          <div class="feed-bracket feed-bracket--bl"></div>
+          <div class="feed-bracket feed-bracket--br"></div>
+
+          <!-- Center crosshair -->
+          <div class="feed-crosshair">
+            <div class="crosshair-h"></div>
+            <div class="crosshair-v"></div>
+            <div class="crosshair-dot"></div>
           </div>
-          <div class="voice__queue">
-            <span class="voice__field">Queue depth</span>
-            <span class="voice__value" id="voiceQueue">0</span>
+
+          <!-- Targeting reticles (animated) -->
+          <div class="reticle reticle--1"></div>
+          <div class="reticle reticle--2"></div>
+
+          <img id="liveFeed" class="feed-img" alt="Live AI Feed" />
+          <div class="feed-offline" id="feedOffline">
+            <div class="offline-icon">
+              <svg width="48" height="48" viewBox="0 0 48 48">
+                <polygon points="24,4 42,14 42,34 24,44 6,34 6,14" fill="none" stroke="var(--accent)" stroke-width="1.5" opacity="0.4"/>
+                <line x1="16" y1="16" x2="32" y2="32" stroke="var(--danger)" stroke-width="2"/>
+                <line x1="32" y1="16" x2="16" y2="32" stroke="var(--danger)" stroke-width="2"/>
+              </svg>
+            </div>
+            <p class="offline-title">FEED UNAVAILABLE</p>
+            <p class="offline-sub">Python backend not reachable</p>
           </div>
+
+          <!-- HUD overlays -->
+          <div class="hud-tl">CAM_01 · SECTOR_A</div>
+          <div class="hud-tr" id="hudTime">--:--:--</div>
+          <div class="hud-bl">YOLO_V8 · TRACK</div>
+          <div class="hud-br" id="hudFps">0 FPS</div>
         </div>
       </div>
-
     </section>
 
-    <!-- Right column: alerts -->
-    <aside class="col col--right">
-      <div class="card card--alerts">
-        <div class="card__header">
-          <span class="card__label">ALERTS</span>
-          <span class="alerts__count" id="alertsCount">0</span>
+    <!-- ── ALERTS ─────────────────────────────────────────────────────────── -->
+    <section class="panel panel--alerts" id="panelAlerts">
+      <div class="panel__frame">
+        <div class="panel__corner panel__corner--tl"></div>
+        <div class="panel__corner panel__corner--tr"></div>
+        <div class="panel__corner panel__corner--bl"></div>
+        <div class="panel__corner panel__corner--br"></div>
+      </div>
+      <div class="panel__header">
+        <div class="panel__header-left">
+          <span class="panel__icon">⚠</span>
+          <span class="panel__title">THREAT ALERTS</span>
         </div>
-        <ul class="alerts__list" id="alertsList">
-          <li class="alerts__empty">No alerts</li>
+        <div class="panel__header-right">
+          <span class="alerts-count-badge" id="alertsCount">0</span>
+        </div>
+      </div>
+      <div class="alerts-scroll">
+        <ul class="alerts-list" id="alertsList">
+          <li class="alerts-empty">
+            <span class="alerts-empty-icon">◌</span>
+            <span>No active alerts</span>
+          </li>
         </ul>
       </div>
-    </aside>
+    </section>
 
-  </main>
-
-  <!-- ── Detection Log ────────────────────────────────────────────────────── -->
-  <section class="log-section">
-    <div class="card card--log">
-      <div class="card__header">
-        <span class="card__label">DETECTION LOG</span>
-        <span class="log__meta" id="logMeta">0 entries</span>
+    <!-- ── VOICE STATUS ─────────────────────────────────────────────────── -->
+    <section class="panel panel--voice" id="panelVoice">
+      <div class="panel__frame">
+        <div class="panel__corner panel__corner--tl"></div>
+        <div class="panel__corner panel__corner--tr"></div>
+        <div class="panel__corner panel__corner--bl"></div>
+        <div class="panel__corner panel__corner--br"></div>
       </div>
-      <div class="log__scroll">
-        <table class="log__table">
+      <div class="panel__header">
+        <div class="panel__header-left">
+          <span class="panel__icon">◎</span>
+          <span class="panel__title">VOICE ENGINE</span>
+        </div>
+        <div class="panel__header-right">
+          <span class="voice-status-badge" id="voiceIndicator">IDLE</span>
+        </div>
+      </div>
+      <div class="voice-body">
+        <div class="voice-visualizer" id="voiceViz">
+          <canvas id="voiceCanvas" width="200" height="50"></canvas>
+        </div>
+        <div class="voice-info">
+          <div class="voice-row">
+            <span class="voice-label">LAST SPOKEN</span>
+            <span class="voice-value" id="voiceLastSpoken">—</span>
+          </div>
+          <div class="voice-row">
+            <span class="voice-label">QUEUE DEPTH</span>
+            <span class="voice-value mono" id="voiceQueue">0</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── RADAR / ZONE MAP ───────────────────────────────────────────────── -->
+    <section class="panel panel--radar" id="panelRadar">
+      <div class="panel__frame">
+        <div class="panel__corner panel__corner--tl"></div>
+        <div class="panel__corner panel__corner--tr"></div>
+        <div class="panel__corner panel__corner--bl"></div>
+        <div class="panel__corner panel__corner--br"></div>
+      </div>
+      <div class="panel__header">
+        <div class="panel__header-left">
+          <span class="panel__icon">◉</span>
+          <span class="panel__title">ZONE RADAR</span>
+        </div>
+        <div class="panel__header-right">
+          <span class="radar-sweep-label">SWEEP</span>
+        </div>
+      </div>
+      <div class="radar-container">
+        <canvas id="radarCanvas" width="200" height="200"></canvas>
+        <div class="zone-bars">
+          <div class="zone-bar">
+            <span class="zone-bar__label">LEFT</span>
+            <div class="zone-bar__track"><div class="zone-bar__fill" id="zoneLeft" style="width:0%"></div></div>
+            <span class="zone-bar__val" id="zoneLeftVal">0</span>
+          </div>
+          <div class="zone-bar">
+            <span class="zone-bar__label">CENTER</span>
+            <div class="zone-bar__track"><div class="zone-bar__fill zone-bar__fill--center" id="zoneCenter" style="width:0%"></div></div>
+            <span class="zone-bar__val" id="zoneCenterVal">0</span>
+          </div>
+          <div class="zone-bar">
+            <span class="zone-bar__label">RIGHT</span>
+            <div class="zone-bar__track"><div class="zone-bar__fill" id="zoneRight" style="width:0%"></div></div>
+            <span class="zone-bar__val" id="zoneRightVal">0</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── DETECTION LOG ──────────────────────────────────────────────────── -->
+    <section class="panel panel--log" id="panelLog">
+      <div class="panel__frame">
+        <div class="panel__corner panel__corner--tl"></div>
+        <div class="panel__corner panel__corner--tr"></div>
+        <div class="panel__corner panel__corner--bl"></div>
+        <div class="panel__corner panel__corner--br"></div>
+      </div>
+      <div class="panel__header">
+        <div class="panel__header-left">
+          <span class="panel__icon">≡</span>
+          <span class="panel__title">DETECTION LOG</span>
+        </div>
+        <div class="panel__header-right">
+          <span class="log-meta" id="logMeta">0 entries</span>
+        </div>
+      </div>
+      <div class="log-scroll">
+        <table class="log-table">
           <thead>
             <tr>
               <th>LABEL</th>
@@ -122,14 +278,24 @@
             </tr>
           </thead>
           <tbody id="logBody">
-            <tr class="log__empty-row">
-              <td colspan="6">Waiting for detections…</td>
+            <tr class="log-empty-row">
+              <td colspan="6">Awaiting detection data…</td>
             </tr>
           </tbody>
         </table>
       </div>
-    </div>
-  </section>
+    </section>
+
+  </main>
+
+  <!-- Offline banner -->
+  <div class="offline-banner" id="offlineBanner">
+    <span class="offline-banner__icon">⚡</span>
+    PYTHON BACKEND UNREACHABLE — ATTEMPTING RECONNECT
+    <span class="offline-banner__dots">
+      <span>.</span><span>.</span><span>.</span>
+    </span>
+  </div>
 
   <script src="/dashboard.js"></script>
 </body>
